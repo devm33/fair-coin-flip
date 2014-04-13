@@ -11,6 +11,7 @@
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
+    <link href="stylesheets/jquery-ui-1.10.4.custom.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="wrapper">
@@ -25,11 +26,31 @@
             </ul>
         </header>
         <section id="content">
-            <form id="form">
-                <label for="input">TODO:</label>
+            <p>Bob and Alice will simulate a fair coin flip through a short exchange of integers.</p>
+            <div id="start">
+                <p>Alice pick the number of digits for your prime factors.</p>
+                <p>Click to create primes of <input type="button" id="compute-primes" value="5"></input> digits.</p>
+                <div id="digit-slider"></div>
+            </div>
+            <div id="primes" style="display:none;">
+                <p><code>n = <span id="n"></span></code> is the product of Alice's primes which is now given to Bob</p>
+                <p>Bob, choose a positive integer less than n to use as your root.</p>
+                <p>Click to choose a = <input type="button" id="bobs-root" value="2" /></p>
+                <div id="root-slider"></div>
+            </div>
+            <div id="roots" style="display:none;">
+                <p>Bob's chosen integer squared in mod n is <code>x = <span id="bobs-square"></code></span></p>
+                <p>Which is now given to Alice who using her prime factors of n is able to solve <code>x = a * a (mod n)</code> for the following two (+/-) values of a:</p>
+                <input type="button" id="root1" class="root" /> or <input type="button" id="root2" class="root" />
+                <p>Alice please chose one to send back to Bob</p>
+            </div>
+            <div id="finish" style="display:none;">
+                <p id="bob-wins">Since Alice chose a root of x that Bob did not know, Bob now knows all roots and is able to factor n, so Bob wins the coin flip.</p>
+                <p id="alice-wins">Since Alice chose a root of x that Bob already knew, Bob does not have enough information to factor n quickly, so Alice wins the coin flip.</p>
+                <p>Alice's prime factors were <code>p = <span id="p"></span>, q = <span id="q"></span></code></p>
+                <input type="button" id="restart" value="Click here to flip again" />
+            </div>
             </form>
-            <div id="output"></div>
-            <div id="perf"></div>
         </section>
         <footer>
             <p>This project is maintained by <a href="https://github.com/devm33">devm33</a></p>
@@ -39,9 +60,82 @@
     <script src="javascripts/scale.fix.js"></script>
     <script src="fair-coin-flip.js"></script>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+    <script src="javascripts/jquery-ui-1.10.4.custom.min.js"></script>
     <script>
     jQuery(function($){
-        /* TODO */
+        /* Sections to be displayed */
+        var start  = $('#start');
+        var primes = $('#primes');
+        var roots  = $('#roots');
+        var finish = $('#finish');
+
+        /* Variables for the coin flip */
+        var d, p, q, n, a, x, r, b;
+
+        /* Initialize the two sliders */
+        $('#digit-slider').slider({ min: 2, value: 5,
+            max: 8, /* Since it is not well-supported to go over 16 digit integers in browsers, prime factors must not exceed 8 digits */
+            slide: function(e, ui) { /* might want slide here? */
+                $('#compute-primes').val(ui.value);
+            }
+        });
+        $('#root-slider').slider({ min: 2, value: 2,
+            slide: function(e, ui) {
+                $('#bobs-root').val(ui.value);
+            }
+        });
+
+        /* Bind listeners */
+        $('#content').on('click', '#compute-primes', compute_primes)
+            .on('click', '#bobs-root', bob_choose_root)
+            .on('click', 'input.root', alice_choose_root)
+            .on('click', '#restart', restart);
+
+        function compute_primes() {
+            start.hide();
+            d = +(this.value);
+            p = generate_prime_of_length(d);
+            q = generate_prime_of_length(d);
+            while(p == q) {
+                q = generate_prime_of_length(d);
+            }
+            n = p * q;
+            $('#p').text(p);
+            $('#q').text(q);
+            $('#n').text(n);
+            $('#root-slider').slider('option', 'max', n - 1);
+            primes.show();
+        }
+
+        function bob_choose_root() {
+            primes.hide();
+            a = +(this.value);
+            x = (a * a) % n;
+            $('#bobs-square').text(x);
+            r = square_root_modpq(x, p, q);
+            $('#root1').val(r[0]);
+            $('#root2').val(r[1]);
+            roots.show();
+        }
+
+        function alice_choose_root() {
+            roots.hide();
+            b = +(this.value);
+            if(a == b || n - a == b) {
+                $('#bob-wins').hide();
+                $('#alice-wins').show();
+            }
+            else {
+                $('#alice-wins').hide();
+                $('#bob-wins').show();
+            }
+            finish.show();
+        }
+
+        function restart() {
+            finish.hide();
+            start.show();
+        }
     });
     </script>
 </body>
