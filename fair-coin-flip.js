@@ -1,32 +1,73 @@
 
+/* testing */
+module.exports = square_root_modp;
+console.log('sqr(9) mod 17 = '+square_root_modp(9,17));
+
 function square_root_modpq(x, p, q) {
     /* Finds the square roots of x in Z_n, where n = p * q
      * Returns an array of the two "positive" (< n/2) square roots
      * assumes p <> q */
+    var rp, rq;
     /* Compute square roots in the fields of the two factors */
     rp = square_root_modp(x, p);
     rq = square_root_modp(x, q);
-    //TODO CRT to find answer, find bezouts: http://en.wikipedia.org/wiki/Chinese_remainder_theorem#Case_of_two_equations
+    /* Use Chinese Remainder Theorem (and Bezout's Identity) map roots
+     * to Z_n */
+    //TODO
     return [-1,1];
 }
 
 function square_root_modp(x, p) {
-    /* Returns the positive (< p/2) square of x in mod p, p an odd prime
+    /* Returns a square root of x in mod p, p an odd prime, could be any
+     * either root of the forms: a, p-a
      * (assumes x is indeed a square)
-     * Uses Cipolla's algorithm: http://en.wikipedia.org/wiki/Cipolla%27s_algorithm */
-    var a, a2n;
+     * Uses Cipolla's algorithm:
+     * http://people.math.gatech.edu/~mbaker/pdf/cipolla2011.pdf */
+    var t, w, i, p2, a, b, a0, b0;
     do {
-        a = random_integer_between(1, p);
-        a2n = a * a - n;
-    } while(legendre(a2n, p) != p-1);
-    //TODO something about the square root of a2n - even though that makes no sense, im tired
-    return 1;
+        t = random_integer_between(1, p);
+        w = t * t - x;
+    } while(legendre(w, p) == 1);
+    p12 = (p+1)/2;
+    a = t; /* use a,b to track squaring: (t + sq(w)) ^ k = a + b sq(w) */ 
+    b = 1; /* as such: t + sq(w)) ^ k + 1 = at + bw + (a + bt)sq(w) */
+    for(i = 1; i < p12; i++) {
+        a0 = a * t + b * w;
+        b0 = a + b * t;
+        a = a0 % p;
+        b = b0 % p;
+    }
+    while(a < 0) {
+        a = (a + p) % p;
+    }
+    return a;
 }
 
 function legendre(a, p) {
-    /* Returns the Legendre symbol of a/p where p is an odd prime */
-    return modular_power(a, (p-1)/2, p);
+    /* Returns the Legendre symbol of a/p where p is an odd prime
+     * Will be of the set {1, 0, p-1} */
+    var l = modular_power(a, (p-1)/2, p);
+    while(l != 1 && l != 0 &&  l != p-1) {
+        l = (l + p) % p;
+    }
+    return l;
 };
+
+/* TODO get bezouts coefs:
+    private static Pair extended_euclidean(int a, int b) {
+        Pair s = new Pair(0, 1);
+        Pair t = new Pair(1, 0);
+        Pair r = new Pair(max(a,b), min(a,b));
+        int q;
+        while (r.b != 0) {
+            q = r.a / r.b;
+            r = new Pair(r.b, r.a - q * r.b);
+            s = new Pair(s.b, s.a - q * s.b);
+            t = new Pair(t.b, t.a - q * t.b);
+        }
+        return new Pair(s.a, t.a);
+    }
+*/
 
 function generate_prime_of_length(n) {
     /* Returns a random prime' number that has n digits
@@ -44,7 +85,8 @@ function generate_prime_of_length(n) {
 function random_integer_of_length(n) {
     /* Returns a random integer with n digits */
     return random_integer_between(Math.pow(10,n-1), Math.pow(10,n));
-    /* note: there could be some performance gains from doing this differently */
+    /* note: this doesnt support n > 16 and may not be the fastest way
+     * to do this */
 }
 
 function random_integer_between(min, max) {
