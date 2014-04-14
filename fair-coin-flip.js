@@ -20,40 +20,77 @@ function square_root_modpq(x, p, q) {
     });
 }
 
-function square_root_modp(x, p) {
-    /* Returns a square root of x in mod p, p an odd prime, could be any
-     * either root of the forms: a, p-a
-     * (assumes x is indeed a square)
-     * Uses Cipolla's algorithm:
+function square_root_modp(a, p) {
+    /* Returns a square root of a in mod p, p an odd prime, could be any
+     * either root of the forms: x, p-x
+     * (assumes a is indeed a quadratic residue)
+     * First checks easy case of p=3(4) then uses Cipolla's algorithm:
      * http://people.math.gatech.edu/~mbaker/pdf/cipolla2011.pdf */
-    var t, w, i, p2, a, b, a0, b0;
+    var t, w, i, p2, x, y, x0, y0;
+    if(p % 4 == 3) {
+        return modular_power(a, Math.floor(p / 4) + 1, p);
+    } 
     do {
         t = random_integer_between(1, p);
-        w = t * t - x;
-    } while(legendre(w, p) == 1);
+        w = t * t - a;
+    } while(jacobi(w, p) == 1);
     p12 = (p+1)/2;
-    a = t; /* use a,b to track squaring: (t + sq(w)) ^ k = a + b sq(w) */ 
-    b = 1; /* as such: t + sq(w)) ^ k + 1 = at + bw + (a + bt)sq(w) */
+    x = t; /* use x,y to track squaring: (t + root(w)) ^ k = x + y root(w) */ 
+    y = 1; /* as such: t + root(w)) ^ k + 1 = xt + yw + (x + yt) root(w) */
     for(i = 1; i < p12; i++) {
-        a0 = a * t + b * w;
-        b0 = a + b * t;
-        a = a0 % p;
-        b = b0 % p;
+        x0 = x * t + y * w;
+        y0 = x + y * t;
+        x = x0 % p;
+        y = y0 % p;
     }
-    while(a < 0) {
-        a = (a + p) % p;
+    if(x < 0) {
+        x = x + p;
     }
-    return a;
+    return x;
 }
 
 function legendre(a, p) {
     /* Returns the Legendre symbol of a/p where p is an odd prime
      * Will be of the set {1, 0, p-1} */
     var l = modular_power(a, (p-1)/2, p);
-    while(l != 1 && l != 0 &&  l != p-1) {
-        l = (l + p) % p;
+    if(l < 0) {
+        l = l + p;
     }
     return l;
+}
+
+function jacobi(A, B) {
+    /* Returns the Jacobi symbol of a by b for b odd */
+    var a = A, b = B, c, s, sign = 1, t;
+    while(b > 1) {
+        if(a >= b) {
+            a = a % b;
+        }
+        if(a === 0) {
+            return 0;
+        }
+        if((a & 1) == 1) { //a odd
+            if((a & 3) == 3 && (b & 3) == 3) { // both a, b are 3 mod 4
+                sign = sign * -1;
+            }
+            t = a; a = b; b = t; // swap a and b
+        }
+        else { // a even
+            c = a, s = 0; // factor out 2 from a = c * 2 ^ s
+            while((c & 1) === 0) {
+                c = c >> 1;
+                s++;
+            }
+            if((s & 1) == 1 && ((b & 7) == 5 || (b & 7) == 3)) {
+                // s (power of factor of 2) must be odd and b must be 5 or 3 mod 8
+                sign = sign * -1;
+            }
+            a = c;
+        }
+    }
+    return sign;
+    /* In an effort to make this faster, much of this was stolen
+     * gratuitously from: http://yacas.sourceforge.net/ */ 
 }
 
 function bezouts_coefs(a, b) {
@@ -81,7 +118,7 @@ function generate_prime_of_length(n) {
     var p;
     while(true) {
          p = random_integer_of_length(n);
-         if(!has_small_prime_factor(p) && miller_rabin_test(p, 100)) {
+         if(!has_small_prime_factor(p) && miller_rabin_test(p, 10)) {
              return p;
          }
     }
@@ -104,7 +141,7 @@ function miller_rabin_test(n, k) {
      * with probably 1/4^k
      */
     var ds, d, s, a, x, i, j;
-    ds = separate_two_factor(n); d = ds[0]; s = ds[1];
+    ds = separate_two_factor(n-1); d = ds[0]; s = ds[1];
     witness: for(i = 0; i < k; i++) {
         a = random_integer_between(2, n-2);
         x = modular_power(a, d, n);
@@ -130,14 +167,29 @@ function separate_two_factor(n) {
      * helper to Miller-Rabin test
      */
     var d = n, k = 0;
-    while(d % 2 === 0) {
-        d = d / 2;
+    while((d & 1) === 0) {
+        d = d >> 1;
         k++;
     }
     return [d, k];
 }
 
 function modular_power(b, k, n) {
+    /* Returns b raised to the k in mod n */
+    var p = b, j = k, r = 1;
+    while(j > 0) {
+        if((j & 1) == 1) { // j odd
+            r = (r * p) % n;
+        }
+        p = (p * p) % n;
+        j = j >> 1;
+    }
+    return r;
+    /* In an effort to make this faster, this was stolen gratuitously
+     * from: http://yacas.sourceforge.net/ */ 
+}
+
+function modular_power_slower(b, k, n) {
     /* Returns b raised to the k in mod n */
     var ans = 1;
     for(var i = 0; i < k; i++) {
@@ -151,14 +203,14 @@ function modular_power(b, k, n) {
 
 var has_small_prime_factor = (function(){
     /* anonymous function to trap list in scope so is only made once */
-    var small_prime = find_all_primes_less_than(1e4);
+    var small_prime = find_all_primes_less_than(1e6);
     var len = small_prime.length;
     return function(n) {
         /* Returns true if n has a factor in list of small primes */
         for(var i = 0; i < len; i++) {
             if(n % small_prime[i] === 0) {
-                if(n == small_prime[i]) { /* quick check in case n is a small prime -- could handle small n better, but not worth building out right now */
-                    return false;
+                if(n == small_prime[i]) { /* quick check in case n is a small prime */
+                    return false; /* could handle small n better, but small dont need to be handled better */
                 }
                 return true;
             }
