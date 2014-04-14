@@ -1,20 +1,23 @@
 
-/* testing */
-module.exports = square_root_modp;
-console.log('sqr(9) mod 17 = '+square_root_modp(9,17));
-
 function square_root_modpq(x, p, q) {
     /* Finds the square roots of x in Z_n, where n = p * q
      * Returns an array of the two "positive" (< n/2) square roots
      * assumes p <> q */
-    var rp, rq;
+    var roots, inverses, partials, n = p * q;
     /* Compute square roots in the fields of the two factors */
-    rp = square_root_modp(x, p);
-    rq = square_root_modp(x, q);
+    roots = [square_root_modp(x, p), square_root_modp(x, q)];
     /* Use Chinese Remainder Theorem (and Bezout's Identity) map roots
      * to Z_n */
-    //TODO
-    return [-1,1];
+    inverses = bezouts_coefs(p, q);
+    partials = [inverses[0] * p * roots[1], inverses[1] * q * roots[0]];
+    return [
+        (partials[0] + partials[1]) % n,
+        -(partials[0] + partials[1]) % n,
+        (partials[0] - partials[1]) % n,
+        (partials[1] - partials[0]) % n
+    ].filter(function(v) {
+        return v > 0; /* only return positive root of each negation pair */
+    });
 }
 
 function square_root_modp(x, p) {
@@ -51,23 +54,25 @@ function legendre(a, p) {
         l = (l + p) % p;
     }
     return l;
-};
+}
 
-/* TODO get bezouts coefs:
-    private static Pair extended_euclidean(int a, int b) {
-        Pair s = new Pair(0, 1);
-        Pair t = new Pair(1, 0);
-        Pair r = new Pair(max(a,b), min(a,b));
-        int q;
-        while (r.b != 0) {
-            q = r.a / r.b;
-            r = new Pair(r.b, r.a - q * r.b);
-            s = new Pair(s.b, s.a - q * s.b);
-            t = new Pair(t.b, t.a - q * t.b);
-        }
-        return new Pair(s.a, t.a);
+function bezouts_coefs(a, b) {
+    var s,t,r,q,flag;
+    s = [0, 1];
+    t = [1, 0];
+    r = [Math.max(a,b), Math.min(a,b)];
+    flag = (a > b);
+    while(r[1] !== 0) {
+            q = Math.floor(r[0] / r[1]);
+            r = [r[1], r[0] - q * r[1]];
+            s = [s[1], s[0] - q * s[1]];
+            t = [t[1], t[0] - q * t[1]];
     }
-*/
+    if(flag) {
+        return [t[0], s[0]];
+    }
+    return [s[0], t[0]];
+}
 
 function generate_prime_of_length(n) {
     /* Returns a random prime' number that has n digits
@@ -98,15 +103,15 @@ function miller_rabin_test(n, k) {
     /* Returns false if n is composite and true if n is probably prime
      * with probably 1/4^k
      */
-    var dk, d, k, a, x, i, j;
-    dk = separate_two_factor(n); d = dk.d; k = dk.k;
+    var ds, d, s, a, x, i, j;
+    ds = separate_two_factor(n); d = ds[0]; s = ds[1];
     witness: for(i = 0; i < k; i++) {
         a = random_integer_between(2, n-2);
         x = modular_power(a, d, n);
         if(x == 1 || x == n - 1) {
             continue witness;
         }
-        for(j = 0; j < k - 1; j++) {
+        for(j = 0; j < s - 1; j++) {
             x = (x * x) % n;
             if(x == 1) {
                 return false;
@@ -121,15 +126,15 @@ function miller_rabin_test(n, k) {
 }
 
 function separate_two_factor(n) {
-    /* Returns an object {'d':d,'k':k} where n = d * 2^k, for maximal k
+    /* Returns an array [d, k] where n = d * 2^k, for maximal k
      * helper to Miller-Rabin test
      */
     var d = n, k = 0;
-    while(d % 2 == 0) {
+    while(d % 2 === 0) {
         d = d / 2;
         k++;
     }
-    return {'d': d, 'k': k};
+    return [d, k];
 }
 
 function modular_power(b, k, n) {
@@ -151,7 +156,7 @@ var has_small_prime_factor = (function(){
     return function(n) {
         /* Returns true if n has a factor in list of small primes */
         for(var i = 0; i < len; i++) {
-            if(n % small_prime[i] == 0) {
+            if(n % small_prime[i] === 0) {
                 if(n == small_prime[i]) { /* quick check in case n is a small prime -- could handle small n better, but not worth building out right now */
                     return false;
                 }
@@ -159,7 +164,7 @@ var has_small_prime_factor = (function(){
             }
         }
         return false;
-    }
+    };
 })();
 
 function find_all_primes_less_than(n) {

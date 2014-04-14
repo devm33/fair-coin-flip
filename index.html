@@ -34,19 +34,19 @@
             </div>
             <div id="primes" style="display:none;">
                 <p><code>n = <span id="n"></span></code> is the product of Alice's primes which is now given to Bob</p>
-                <p>Bob, choose a positive integer less than n to use as your root.</p>
-                <p>Click to choose a = <input type="button" id="bobs-root" value="2" /></p>
+                <p>Bob, choose a positive integer less than <code>n</code> to use as your root.</p>
+                <p>Click to choose a root <code>a = </code><input type="button" id="bobs-root" value="2" /></p>
                 <div id="root-slider"></div>
             </div>
             <div id="roots" style="display:none;">
-                <p>Bob's chosen integer squared in mod n is <code>x = <span id="bobs-square"></code></span></p>
+                <p>Bob's chosen integer squared is <code>x = <span id="bobs-square"> (mod n)</code></span></p>
                 <p>Which is now given to Alice who using her prime factors of n is able to solve <code>x = a * a (mod n)</code> for the following two (+/-) values of a:</p>
                 <input type="button" id="root1" class="root" /> or <input type="button" id="root2" class="root" />
                 <p>Alice please chose one to send back to Bob</p>
             </div>
             <div id="finish" style="display:none;">
-                <p id="bob-wins">Since Alice chose a root of x that Bob did not know, Bob now knows all roots and is able to factor n, so Bob wins the coin flip.</p>
-                <p id="alice-wins">Since Alice chose a root of x that Bob already knew, Bob does not have enough information to factor n quickly, so Alice wins the coin flip.</p>
+                <p id="bob-wins">Since Alice chose a root of x that Bob did not know, Bob now knows all roots and is able to factor <code>n = p * q</code>, so Bob wins the coin flip.</p>
+                <p id="alice-wins">Since Alice chose a root of x that Bob already knew, Bob does not have enough information to factor <code>n = p * q</code> quickly, so Alice wins the coin flip.</p>
                 <p>Alice's prime factors were <code>p = <span id="p"></span>, q = <span id="q"></span></code></p>
                 <input type="button" id="restart" value="Click here to flip again" />
             </div>
