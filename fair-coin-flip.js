@@ -15,12 +15,12 @@ function square_root_modpq(x, p, q) {
         -(partials[0] + partials[1]) % n,
         (partials[0] - partials[1]) % n,
         (partials[1] - partials[0]) % n
-    ].filter(function(v) {
-        return v > 0; /* only return positive root of each negation pair */
+    ].map(function(v) {
+        return v > 0 ? v : v + n; // return all roots, but greater than zero
     });
 }
 
-function square_root_modp(a, p) {
+function square_root_modp(a, p) { //console.log('root '+a+' mod '+p);
     /* Returns a square root of a in mod p, p an odd prime, could be any
      * either root of the forms: x, p-x
      * (assumes a is indeed a quadratic residue)
@@ -59,18 +59,22 @@ function legendre(a, p) {
     return l;
 }
 
-function jacobi(A, B) {
+function jacobi(A, B) { //console.log('jacobi '+A+' '+B);
     /* Returns the Jacobi symbol of a by b for b odd */
     var a = A, b = B, c, s, sign = 1, t;
-    while(b > 1) {
+    while(b > 1) { //console.log('> jacobi '+a+' '+b);
         if(a >= b) {
             a = a % b;
+        }
+        else if(a < 0) {
+            a = (b - a) % b; // -a, negated and mod simplified
+            a = b - a; // --a = a, double negated
         }
         if(a === 0) {
             return 0;
         }
         if((a & 1) == 1) { //a odd
-            if((a & 3) == 3 && (b & 3) == 3) { // both a, b are 3 mod 4
+            if((a & 3) == 3 && (b & 3) == 3) { // both a, b are 3 mod 4 - cor of quadratic reciprocity
                 sign = sign * -1;
             }
             t = a; a = b; b = t; // swap a and b
@@ -82,7 +86,7 @@ function jacobi(A, B) {
                 s++;
             }
             if((s & 1) == 1 && ((b & 7) == 5 || (b & 7) == 3)) {
-                // s (power of factor of 2) must be odd and b must be 5 or 3 mod 8
+                // s (power of factor of 2) must be odd and b must be 5 or 3 mod 8 - cor of Gauss lemma
                 sign = sign * -1;
             }
             a = c;
@@ -118,7 +122,7 @@ function generate_prime_of_length(n) {
     var p;
     while(true) {
          p = random_integer_of_length(n);
-         if(!has_small_prime_factor(p) && miller_rabin_test(p, 10)) {
+         if(!has_small_prime_factor(p) && miller_rabin_test(p, 100)) {
              return p;
          }
     }

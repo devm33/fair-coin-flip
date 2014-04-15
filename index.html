@@ -21,28 +21,31 @@
             <p class="view"><a href="https://github.com/devm33/fair-coin-flip">View the Project on GitHub <small>devm33/fair-coin-flip</small></a></p>
         </header>
         <section id="content">
-            <p>Bob and Alice will simulate a fair coin flip through a short exchange.</p>
+            <p class="title">Bob and Alice will simulate a fair coin flip through a short exchange.</p>
             <div id="start">
-                <p>Alice pick the number of digits for your prime factors.</p>
-                <p>Click to create primes of <input type="button" id="compute-primes" value="5"></input> digits.</p>
-                <div id="digit-slider"></div>
+                <p>Alice slide to pick the number of digits for your primes.</p>
+                <div id="digit-slider" class="slider"></div>
+                <p>Then click here to generate primes of <input type="button" id="compute-primes" value="5"></input> digits.</p>
             </div>
             <div id="primes" style="display:none;">
-                <p><code>n = <span id="n"></span></code> is the product of Alice's primes which is now given to Bob</p>
+                <p><code>n = <span class="n"></span></code> is the product of Alice's primes which is now given to Bob</p>
                 <p>Bob, choose a positive integer less than <code>n</code> to use as your root.</p>
-                <p>Click to choose a root <code>a = </code><input type="button" id="bobs-root" value="2" /></p>
-                <div id="root-slider"></div>
+                <p>Slide to choose a root, and then, click here to send its square to Alice <code>x<sup>2</sup> = </code><input type="button" id="bobs-square" value="4" /></p>
+                <div id="root-slider" class="slider"></div>
             </div>
             <div id="roots" style="display:none;">
-                <p>Bob's chosen integer squared is <code>x = <span id="bobs-square"> (mod n)</code></span></p>
-                <p>Which is now given to Alice who using her prime factors of n is able to solve <code>x = a * a (mod n)</code> for the following two (+/-) values of a:</p>
-                <input type="button" id="root1" class="root" /> or <input type="button" id="root2" class="root" />
-                <p>Alice please chose one to send back to Bob</p>
+                <p>Bob's chosen square is <code>a = <span class="a"></span></code>.</p>
+                <p>Alice using her prime factors of <code>n</code> is able to solve <code>a = x<sup>2</sup> (mod n)</code> for the four possible values of <code>x</code>.</p>
+                <p>Alice, choose one of these square roots to send back to Bob</p>
+                <input type="button" id="root0" class="root" /> or <input type="button" id="root1" class="root" /> or
+                <input type="button" id="root2" class="root" /> or <input type="button" id="root3" class="root" />
+                <p>(Note: two of these are simply negations of each other)</p>
             </div>
             <div id="finish" style="display:none;">
-                <p id="bob-wins">Since Alice chose a root of x that Bob did not know, Bob now knows all roots and is able to factor <code>n = p * q</code>, so Bob wins the coin flip.</p>
-                <p id="alice-wins">Since Alice chose a root of x that Bob already knew, Bob does not have enough information to factor <code>n = p * q</code> quickly, so Alice wins the coin flip.</p>
+                <p id="bob-wins">Since Alice chose a root of <code>a</code> that Bob did not know, Bob now knows all roots and is able to factor <code>n</code> quickly, so Bob wins the coin flip.</p>
+                <p id="alice-wins">Since Alice chose a root of <code>a</code> that Bob already knew, Bob does not have enough information to factor <code>n</code> quickly, so Alice wins the coin flip.</p>
                 <p>Alice's prime factors were <code>p = <span id="p"></span>, q = <span id="q"></span></code></p>
+                <p>Bob's root was <code>x = <span id="x"></span></code></p>
                 <input type="button" id="restart" value="Click here to flip again" />
             </div>
             </form>
@@ -65,7 +68,7 @@
         var finish = $('#finish');
 
         /* Variables for the coin flip */
-        var d, p, q, n, a, x, r, b;
+        var d, p, q, n, a, x, r, b, i;
 
         /* Initialize the two sliders */
         $('#digit-slider').slider({ min: 2, value: 5,
@@ -74,15 +77,17 @@
                 $('#compute-primes').val(ui.value);
             }
         });
-        $('#root-slider').slider({ min: 2, value: 2,
+        $('#root-slider').slider({ min: 1, value: 2,
             slide: function(e, ui) {
-                $('#bobs-root').val(ui.value);
+                x = +(ui.value);
+                a = (x * x) % n;
+                $('#bobs-square').val(a);
             }
         });
 
         /* Bind listeners */
         $('#content').on('click', '#compute-primes', compute_primes)
-            .on('click', '#bobs-root', bob_choose_root)
+            .on('click', '#bobs-square', bob_choose_root)
             .on('click', 'input.root', alice_choose_root)
             .on('click', '#restart', restart);
 
@@ -97,26 +102,29 @@
             n = p * q;
             $('#p').text(p);
             $('#q').text(q);
-            $('#n').text(n);
-            $('#root-slider').slider('option', 'max', n - 1);
+            $('.n').text(n);
+            $('#root-slider').slider('option', {'max': n - 1, 'value': 2});
+            $('#bobs-square').val(4);
             primes.show();
         }
 
         function bob_choose_root() {
             primes.hide();
-            a = +(this.value);
-            x = (a * a) % n;
-            $('#bobs-square').text(x);
-            r = square_root_modpq(x, p, q);
-            $('#root1').val(r[0]);
-            $('#root2').val(r[1]);
+            x = +(this.value);
+            a = (x * x) % n;
+            $('#x').text(x);
+            $('.a').text(a);
+            r = square_root_modpq(a, p, q);
+            for(i = 0; i < 4; i++) {
+                $('#root'+i).val(r[i]);
+            }
             roots.show();
         }
 
         function alice_choose_root() {
             roots.hide();
             b = +(this.value);
-            if(a == b || n - a == b) {
+            if(x == b || n - x == b) {
                 $('#bob-wins').hide();
                 $('#alice-wins').show();
             }
